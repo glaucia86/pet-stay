@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+.turbo/
+
+# Testing
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+.env.development
+.env.production
+.env.test
+
+# Lock files (opcional - remova se quiser versionar)
+# pnpm-lock.yaml
+# package-lock.json
+# yarn.lock
+
+# Database
+*.sqlite
+*.db
+**/prisma/dev.db*
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Deployment
+.vercel/
+.netlify/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploads
+uploads/
+public/uploads/

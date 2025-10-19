@@ -1,0 +1,472 @@
+# PetStay API Test Scripts
+# Use REST Client extension in VS Code to run these requests
+
+### Variables
+@baseUrl = http://localhost:4000/api
+@healthUrl = http://localhost:4000
+@accessToken = {{login.response.body.accessToken}}
+
+### Health Check
+GET {{healthUrl}}/health
+
+### API Hello
+GET {{baseUrl}}/v1/hello
+
+###############################################
+# AUTHENTICATION
+###############################################
+
+### Register a new user (Tutor)
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "tutor@test.com",
+  "password": "senha123",
+  "name": "Maria Silva"
+}
+
+### Register a new user (Host)
+# @name registerHost
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "host@test.com",
+  "password": "senha123",
+  "name": "João Santos"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "tutor@test.com",
+  "password": "senha123"
+}
+
+### Refresh Token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+### Logout
+POST {{baseUrl}}/auth/logout
+
+###############################################
+# USERS
+###############################################
+
+### Get current user profile
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Update current user
+PATCH {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Maria Silva Updated",
+  "phone": "+5511999999999"
+}
+
+### Update tutor profile
+PATCH {{baseUrl}}/users/me/tutor
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "bio": "Amante de animais, cuido dos pets com muito carinho!",
+  "experience": "5 anos cuidando de cães e gatos"
+}
+
+### Update host profile
+PATCH {{baseUrl}}/users/me/host
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "bio": "Casa espaçosa com quintal grande",
+  "address": "Rua das Flores, 123",
+  "city": "São Paulo",
+  "state": "SP",
+  "zipCode": "01234-567"
+}
+
+### Get user stats
+GET {{baseUrl}}/users/me/stats
+Authorization: Bearer {{accessToken}}
+
+### Upload user avatar (requires S3 configuration)
+# Note: Replace the file path with an actual image file on your system
+POST {{baseUrl}}/users/me/avatar
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/avatar.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### List all users (public profiles)
+GET {{baseUrl}}/users
+Authorization: Bearer {{accessToken}}
+
+### Get specific user
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# PETS
+###############################################
+
+### Create a pet
+# @name createPet
+POST {{baseUrl}}/pets
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Rex",
+  "species": "dog",
+  "breed": "Labrador",
+  "age": 3,
+  "size": "large",
+  "temperament": "Amigável e brincalhão",
+  "medicalInfo": "Vacinado, castrado",
+  "specialNeeds": "Precisa de exercício diário"
+}
+
+### List my pets
+GET {{baseUrl}}/pets
+Authorization: Bearer {{accessToken}}
+
+### Get pet details
+GET {{baseUrl}}/pets/{{petId}}
+Authorization: Bearer {{accessToken}}
+
+### Update pet
+PATCH {{baseUrl}}/pets/{{petId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "age": 4,
+  "temperament": "Muito amigável e brincalhão"
+}
+
+### Delete pet
+DELETE {{baseUrl}}/pets/{{petId}}
+Authorization: Bearer {{accessToken}}
+
+### Upload pet photo (requires S3 configuration)
+# Note: Replace {{petId}} with an actual pet ID and file path with an actual image
+POST {{baseUrl}}/pets/{{petId}}/photo
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="pet.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/pet.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###############################################
+# LISTINGS (Anúncios)
+###############################################
+
+### Create a listing (requires active host subscription)
+# @name createListing
+POST {{baseUrl}}/listings
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Casa aconchegante com quintal",
+  "description": "Ambiente perfeito para seu pet se sentir em casa",
+  "pricePerDay": 8000,
+  "maxPets": 2,
+  "acceptedPetTypes": ["dog", "cat"],
+  "acceptedPetSizes": ["small", "medium", "large"],
+  "amenities": ["quintal", "ar-condicionado", "cameras"],
+  "rules": "Pets devem estar vacinados"
+}
+
+### Search listings (public)
+GET {{baseUrl}}/listings?city=São Paulo&minPrice=5000&maxPrice=15000&petType=dog
+Authorization: Bearer {{accessToken}}
+
+### Get my listings
+GET {{baseUrl}}/listings/me
+Authorization: Bearer {{accessToken}}
+
+### Get listing details (public)
+GET {{baseUrl}}/listings/{{listingId}}
+
+### Update listing
+PATCH {{baseUrl}}/listings/{{listingId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Casa aconchegante com quintal grande",
+  "pricePerDay": 9000
+}
+
+### Toggle listing active status
+PATCH {{baseUrl}}/listings/{{listingId}}/toggle-active
+Authorization: Bearer {{accessToken}}
+
+### Delete listing
+DELETE {{baseUrl}}/listings/{{listingId}}
+Authorization: Bearer {{accessToken}}
+
+### Upload listing photo (requires S3 configuration)
+# Note: Replace {{listingId}} with an actual listing ID and file path with an actual image
+# Maximum of 10 photos per listing
+POST {{baseUrl}}/listings/{{listingId}}/photos
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="listing.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/listing.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Delete listing photo
+DELETE {{baseUrl}}/listings/{{listingId}}/photos
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "photoUrl": "https://bucket.s3.region.amazonaws.com/listingPhoto/userId/timestamp-hash.jpg"
+}
+
+###############################################
+# BOOKINGS (Reservas)
+###############################################
+
+### Create a booking
+# @name createBooking
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "listingId": "{{listingId}}",
+  "petIds": ["{{petId}}"],
+  "startDate": "2025-11-01T00:00:00.000Z",
+  "endDate": "2025-11-05T00:00:00.000Z",
+  "notes": "Meu cachorro gosta de brincar pela manhã"
+}
+
+### List my bookings
+GET {{baseUrl}}/bookings
+Authorization: Bearer {{accessToken}}
+
+### Get booking details
+GET {{baseUrl}}/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+
+### Update booking status (confirm/cancel)
+PATCH {{baseUrl}}/bookings/{{bookingId}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "confirmed"
+}
+
+### Delete booking
+DELETE {{baseUrl}}/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# REVIEWS (Avaliações)
+###############################################
+
+### Get reviewable bookings
+GET {{baseUrl}}/reviews/reviewable-bookings
+Authorization: Bearer {{accessToken}}
+
+### Create a review
+# @name createReview
+POST {{baseUrl}}/reviews
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "rating": 5,
+  "comment": "Excelente experiência! Meu pet foi muito bem cuidado."
+}
+
+### List reviews (public)
+GET {{baseUrl}}/reviews?listingId={{listingId}}
+
+### Get reviews received by me
+GET {{baseUrl}}/reviews/me/received
+Authorization: Bearer {{accessToken}}
+
+### Get reviews given by me
+GET {{baseUrl}}/reviews/me/given
+Authorization: Bearer {{accessToken}}
+
+### Get review details
+GET {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{accessToken}}
+
+### Update review
+PATCH {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Experiência incrível! Meu pet foi muito bem cuidado e voltou feliz."
+}
+
+### Delete review
+DELETE {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# MESSAGES (Mensagens)
+###############################################
+
+### Send a message
+# @name sendMessage
+POST {{baseUrl}}/messages
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "listingId": "{{listingId}}",
+  "receiverId": "{{userId}}",
+  "content": "Olá! Gostaria de saber mais sobre a disponibilidade."
+}
+
+### Get my conversations
+GET {{baseUrl}}/messages/conversations
+Authorization: Bearer {{accessToken}}
+
+### Get messages from a conversation
+GET {{baseUrl}}/messages/conversations/{{listingId}}/{{otherUserId}}
+Authorization: Bearer {{accessToken}}
+
+### Mark conversation as read
+PATCH {{baseUrl}}/messages/conversations/{{listingId}}/{{otherUserId}}/read
+Authorization: Bearer {{accessToken}}
+
+### Get unread count
+GET {{baseUrl}}/messages/unread-count
+Authorization: Bearer {{accessToken}}
+
+### Get message details
+GET {{baseUrl}}/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+
+### Delete message
+DELETE {{baseUrl}}/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# BILLING (Stripe)
+###############################################
+
+### Create subscription
+# @name createSubscription
+POST {{baseUrl}}/billing/subscriptions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "plan": "basic",
+  "paymentMethodId": "pm_card_visa"
+}
+
+### Get current subscription
+GET {{baseUrl}}/billing/subscriptions/current
+Authorization: Bearer {{accessToken}}
+
+### Update subscription plan
+PATCH {{baseUrl}}/billing/subscriptions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "plan": "pro"
+}
+
+### Cancel subscription
+DELETE {{baseUrl}}/billing/subscriptions
+Authorization: Bearer {{accessToken}}
+
+### Add payment method
+POST {{baseUrl}}/billing/payment-methods
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "paymentMethodId": "pm_card_mastercard"
+}
+
+### List payment methods
+GET {{baseUrl}}/billing/payment-methods
+Authorization: Bearer {{accessToken}}
+
+### Set default payment method
+PATCH {{baseUrl}}/billing/payment-methods/{{paymentMethodId}}/default
+Authorization: Bearer {{accessToken}}
+
+### Remove payment method
+DELETE {{baseUrl}}/billing/payment-methods/{{paymentMethodId}}
+Authorization: Bearer {{accessToken}}
+
+### Stripe Webhook (for testing)
+POST {{baseUrl}}/billing/webhook
+Stripe-Signature: whsec_test_signature
+Content-Type: application/json
+
+{
+  "id": "evt_test_webhook",
+  "type": "invoice.paid",
+  "data": {
+    "object": {
+      "subscription": "sub_test"
+    }
+  }
+}
+
+###############################################
+# FAVORITES
+###############################################
+
+### Add listing to favorites
+# @name addFavorite
+POST {{baseUrl}}/favorites/{{listingId}}
+Authorization: Bearer {{accessToken}}
+
+### Remove listing from favorites
+DELETE {{baseUrl}}/favorites/{{listingId}}
+Authorization: Bearer {{accessToken}}
+
+### List all user favorites
+GET {{baseUrl}}/favorites
+Authorization: Bearer {{accessToken}}
+
+### Check if listing is favorited
+GET {{baseUrl}}/favorites/{{listingId}}/check
+Authorization: Bearer {{accessToken}}
+
+### Get favorite count for a listing (public)
+GET {{baseUrl}}/listings/{{listingId}}/favorites/count
+

@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Roles: tutor, host, admin
+enum Role {
+  tutor
+  host
+  admin
+}
+
+enum PetSize {
+  small
+  medium
+  large
+}
+
+enum PetSpecies {
+  dog
+  cat
+}
+
+enum SubscriptionStatus {
+  inactive
+  active
+  past_due
+  canceled
+  unpaid
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  ongoing
+  completed
+  canceled
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  name         String
+  phone        String?
+  bio          String?
+  role         Role      @default(tutor)
+  emailVerified Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
+  avatarUrl    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  tutor        Tutor?
+  host         Host?
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+  givenReviews     Review[]  @relation("ReviewAuthor")
+  receivedReviews  Review[]  @relation("ReviewReceiver")
+  favorites        Favorite[]
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model Tutor {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  address          String?
+  city             String?
+  state            String?
+  zipCode          String?
+  emergencyContact String?
+  emergencyPhone   String?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pets     Pet[]
+  bookings Booking[]
+
+  @@map("tutors")
+}
+
+model Host {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  latitude          Float?
+  longitude         Float?
+  propertyType      String?
+  propertySize      Int?
+  hasYard           Boolean  @default(false)
+  acceptedPetSizes  String[]
+  acceptedPetTypes  String[]
+  amenities         String[]
+  kycLevel          Int      @default(0) // 0 = not verified, 1 = basic, 2 = full
+  kycDocuments      String[] // URLs to documents
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings     Listing[]
+  subscription Subscription?
+  availability HostAvailability[]
+
+  @@map("hosts")
+}
+
+model Pet {
+  id                  String     @id @default(cuid())
+  tutorId             String
+  name                String
+  species             PetSpecies
+  breed               String?
+  size                PetSize?
+  gender              String?
+  birthDate           DateTime?  @db.Date
+  weight              Float?
+  medicalInfo         String?
+  specialNeeds        String?
+  isVaccinated        Boolean    @default(false)
+  vaccinationDetails  String?
+  photoUrl            String?
+  temperament         String?
+  notes               String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@map("pets")
+}
+
+model Listing {
+  id               String   @id @default(cuid())
+  hostId           String
+  title            String
+  description      String
+  pricePerDay      Int      // In cents
+  currency         String   @default("BRL")
+  maxPets          Int      @default(1)
+  acceptsDogs      Boolean  @default(true)
+  acceptsCats      Boolean  @default(true)
+  acceptsSmallPets Boolean  @default(true)
+  acceptsMediumPets Boolean @default(true)
+  acceptsLargePets Boolean  @default(false)
+  hasYard          Boolean  @default(false)
+  allowsWalks      Boolean  @default(true)
+  providesMedication Boolean @default(false)
+  photos           String[]
+  policies         String?
+  cancellationPolicy String?
+  isActive         Boolean  @default(false) // Depends on subscription
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  host      Host       @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  reviews   Review[]
+  bookings  Booking[]
+  favorites Favorite[]
+  messages  Message[]
+
+  @@map("listings")
+}
+
+model HostAvailability {
+  id        String   @id @default(cuid())
+  hostId    String
+  date      DateTime @db.Date
+  isBlocked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  host Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@unique([hostId, date])
+  @@map("host_availability")
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  listingId  String
+  tutorId    String
+  startDate  DateTime      @db.Date
+  endDate    DateTime      @db.Date
+  totalPrice Int           // In cents
+  status     BookingStatus @default(pending)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id])
+  tutor   Tutor   @relation(fields: [tutorId], references: [id])
+  review  Review?
+
+  @@map("bookings")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  listingId String
+  senderId  String
+  receiverId String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  listing  Listing @relation(fields: [listingId], references: [id])
+  sender   User    @relation("MessageSender", fields: [senderId], references: [id])
+  receiver User    @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@map("messages")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String?  @unique
+  authorId  String
+  receiverId String
+  listingId String? // Add this to link reviews to listings
+  rating    Int      @db.SmallInt // 1-5
+  comment   String?
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  booking  Booking? @relation(fields: [bookingId], references: [id])
+  listing  Listing? @relation(fields: [listingId], references: [id])
+  author   User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  receiver User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
+
+  @@map("reviews")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("favorites")
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  hostId           String             @unique
+  stripeCustomerId String?
+  stripeSubId      String?            @unique
+  status           SubscriptionStatus @default(inactive)
+  planName         String             @default("basic") // basic, pro
+  planPrice        Int?               // In cents
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  canceledAt         DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  host Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// Geographic indexes for location-based search
+// Note: These will be added in migration files
+

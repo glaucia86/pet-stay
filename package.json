@@ -1,0 +1,26 @@
+{
+  "name": "petstay-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "npm run -w apps/api build && npm run -w apps/web build",
+    "dev": "concurrently \"npm:dev:*\"",
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "format": "prettier -w ."
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.3.3"
+  },
+  "dependencies": {
+    "@esbuild/win32-x64": "^0.25.11"
+  }
+}
