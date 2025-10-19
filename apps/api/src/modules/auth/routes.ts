@@ -14,15 +14,15 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   const authService = new AuthService();
 
   // Register
-  app.post<{ Body: RegisterInput }>('/auth/register', {
+  app.post<{ Body: RegisterInput }>('/v1/auth/register', {
     schema: {
       body: zodToJsonSchema(registerSchema),
     },
     handler: async (request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) => {
       try {
         const result = await authService.register(request.body);
-        
-        // Set refresh token as httpOnly cookie
+
+        // Set refresh token as httpOnly cookie for clients that rely on cookies
         reply.setCookie('refreshToken', result.refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -30,27 +30,31 @@ export async function registerAuthRoutes(app: FastifyInstance) {
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
+        reply.status(201);
         return {
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          message: 'Account created successfully',
         };
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Registration failed';
         reply.status(400);
-        return { error: error instanceof Error ? error.message : 'Registration failed' };
+        return { message };
       }
     },
   });
 
   // Login
-  app.post<{ Body: LoginInput }>('/auth/login', {
+  app.post<{ Body: LoginInput }>('/v1/auth/login', {
     schema: {
       body: zodToJsonSchema(loginSchema),
     },
     handler: async (request: FastifyRequest<{ Body: LoginInput }>, reply: FastifyReply) => {
       try {
         const result = await authService.login(request.body);
-        
-        // Set refresh token as httpOnly cookie
+
+        // Set refresh token as httpOnly cookie for clients that rely on cookies
         reply.setCookie('refreshToken', result.refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -61,28 +65,34 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         return {
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          message: 'Login successful',
         };
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Login failed';
         reply.status(401);
-        return { error: error instanceof Error ? error.message : 'Login failed' };
+        return { message };
       }
     },
   });
 
   // Refresh token
-  app.post('/auth/refresh', {
-    handler: async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post<{ Body: RefreshTokenInput }>('/v1/auth/refresh', {
+    schema: {
+      body: zodToJsonSchema(refreshTokenSchema),
+    },
+    handler: async (request: FastifyRequest<{ Body: RefreshTokenInput }>, reply: FastifyReply) => {
       try {
-        const refreshToken = request.cookies.refreshToken;
-        
+        const { refreshToken } = request.body;
+
         if (!refreshToken) {
           reply.status(401);
-          return { error: 'No refresh token provided' };
+          return { message: 'No refresh token provided' };
         }
 
         const result = await authService.refreshToken({ refreshToken });
-        
-        // Set new refresh token as httpOnly cookie
+
+        // Set new refresh token as httpOnly cookie for clients that rely on cookies
         reply.setCookie('refreshToken', result.refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -92,20 +102,25 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
         return {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          message: 'Token refreshed successfully',
         };
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Token refresh failed';
         reply.status(401);
-        return { error: error instanceof Error ? error.message : 'Token refresh failed' };
+        return { message };
       }
     },
   });
 
   // Logout
-  app.post('/auth/logout', {
-    handler: async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post<{ Body: Partial<RefreshTokenInput> }>('/v1/auth/logout', {
+    handler: async (request: FastifyRequest<{ Body: Partial<RefreshTokenInput> }>, reply: FastifyReply) => {
       try {
-        const refreshToken = request.cookies.refreshToken;
-        
+        const tokenFromBody = request.body?.refreshToken;
+        const tokenFromCookie = request.cookies.refreshToken;
+        const refreshToken = tokenFromBody || tokenFromCookie;
+
         if (refreshToken) {
           await authService.logout(refreshToken);
         }
@@ -114,7 +129,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         return { message: 'Logged out successfully' };
       } catch (error) {
         reply.status(500);
-        return { error: 'Logout failed' };
+        return { message: 'Logout failed' };
       }
     },
   });

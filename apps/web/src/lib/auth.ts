@@ -32,7 +32,7 @@ export interface User {
 
 export const authService = {
   async login(credentials: LoginCredentials) {
-    const response = await api.post('/auth/login', credentials)
+    const response = await api.post('/v1/auth/login', credentials)
     const { accessToken, refreshToken, user } = response.data
     
     if (typeof window !== 'undefined') {
@@ -45,7 +45,7 @@ export const authService = {
   },
 
   async register(data: RegisterData) {
-    const response = await api.post('/auth/register', data)
+    const response = await api.post('/v1/auth/register', data)
     const { accessToken, refreshToken, user } = response.data
     
     if (typeof window !== 'undefined') {
@@ -62,7 +62,7 @@ export const authService = {
     
     if (refreshToken) {
       try {
-        await api.post('/auth/logout', { refreshToken })
+        await api.post('/v1/auth/logout', { refreshToken })
       } catch (error) {
         console.error('Logout error:', error)
       }
@@ -77,7 +77,7 @@ export const authService = {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      const response = await api.get('/users/me')
+      const response = await api.get('/v1/users/me')
       return response.data
     } catch (error) {
       return null
