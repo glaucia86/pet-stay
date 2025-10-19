@@ -1,4 +1,4 @@
-# 🐾 PetStay
+# 🐾 PetStay - Hospedagem de Pets com Carinho e Segurança
 
 <div align="center">
   <img src="./resources/img/petstay.gif" alt="PetStay Demo" width="800">
@@ -358,22 +358,46 @@ pnpm prisma migrate reset
 ## 📞 Contato
 
 - **Email**: contato@petstay.com.br
-- **Telefone**: (21) 99152-0972
+- **Linkedin**: Glaucia Lemos
+- **Telefone**: (21) xxxxx-xxxx
 - **Localização**: Rio de Janeiro, RJ - Brasil
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+**Copyright © 2025 Glaucia Lemos. Todos os direitos reservados.**
+
+Este projeto é de propriedade exclusiva de Glaucia Lemos e **NÃO** está disponível para uso, cópia, modificação ou distribuição sem autorização prévia por escrito.
+
+### ⚠️ Restrições de Uso
+
+- ❌ **Proibido** copiar, reproduzir ou distribuir este código
+- ❌ **Proibido** usar este projeto para fins comerciais
+- ❌ **Proibido** modificar ou criar trabalhos derivados
+- ❌ **Proibido** uso sem autorização expressa do autor
+
+Para solicitar permissões ou licenciamento, entre em contato através dos canais oficiais abaixo.
+
+## 📞 Contato
+
+- **Email**: contato@petstay.com.br
+- **LinkedIn**: [Glaucia Lemos](https://www.linkedin.com/in/glaucialemos/)
+- **GitHub**: [@glaucia86](https://github.com/glaucia86)
+- **Telefone**: (21) xxxxx-xxxx
+- **Localização**: Rio de Janeiro, RJ - Brasil
+
+---
+
+## ⚖️ Aviso Legal
+
+Este é um projeto proprietário desenvolvido para fins educacionais e de portfólio. Qualquer uso não autorizado será tratado de acordo com as leis de direitos autorais aplicáveis.
+
+---
 
 ## 👥 Contribuindo
 
-Contribuições são bem-vindas! Por favor, siga os passos:
+**Este é um projeto privado e não está aceitando contribuições externas no momento.**
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
-4. Push para a branch (`git push origin feature/MinhaFeature`)
-5. Abra um Pull Request
+Se você tiver sugestões ou encontrar problemas, entre em contato através dos canais oficiais listados acima.
 
 ## 🗺️ Roadmap
 
