@@ -357,4 +357,137 @@ export async function registerListingRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // Get host availability
+  app.get(
+    '/api/hosts/availability',
+    { onRequest: [authenticateJWT] },
+    async (request, reply) => {
+      try {
+        const user = request.user as AuthenticatedUser;
+        const { startDate, endDate } = request.query as any;
+
+        // Get user's host profile
+        const host = await prisma.host.findUnique({
+          where: { userId: user.userId },
+        });
+
+        if (!host) {
+          return reply.status(400).send({ error: 'Host profile not found' });
+        }
+
+        const where: any = { hostId: host.id };
+
+        if (startDate && endDate) {
+          where.date = {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          };
+        }
+
+        const availability = await prisma.hostAvailability.findMany({
+          where,
+          orderBy: { date: 'asc' },
+        });
+
+        return reply.status(200).send({ availability });
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
+    }
+  );
+
+  // Block dates
+  app.post(
+    '/api/hosts/availability/block',
+    { onRequest: [authenticateJWT] },
+    async (request, reply) => {
+      try {
+        const user = request.user as AuthenticatedUser;
+        const { dates } = request.body as { dates: string[] };
+
+        if (!dates || !Array.isArray(dates) || dates.length === 0) {
+          return reply.status(400).send({ error: 'Invalid dates array' });
+        }
+
+        // Get user's host profile
+        const host = await prisma.host.findUnique({
+          where: { userId: user.userId },
+        });
+
+        if (!host) {
+          return reply.status(400).send({ error: 'Host profile not found' });
+        }
+
+        // Create or update blocked dates
+        const operations = dates.map((dateStr) => {
+          const date = new Date(dateStr);
+          return prisma.hostAvailability.upsert({
+            where: {
+              hostId_date: {
+                hostId: host.id,
+                date,
+              },
+            },
+            update: {
+              isBlocked: true,
+            },
+            create: {
+              hostId: host.id,
+              date,
+              isBlocked: true,
+            },
+          });
+        });
+
+        await prisma.$transaction(operations);
+
+        return reply.status(200).send({ message: 'Dates blocked successfully' });
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
+    }
+  );
+
+  // Unblock dates
+  app.post(
+    '/api/hosts/availability/unblock',
+    { onRequest: [authenticateJWT] },
+    async (request, reply) => {
+      try {
+        const user = request.user as AuthenticatedUser;
+        const { dates } = request.body as { dates: string[] };
+
+        if (!dates || !Array.isArray(dates) || dates.length === 0) {
+          return reply.status(400).send({ error: 'Invalid dates array' });
+        }
+
+        // Get user's host profile
+        const host = await prisma.host.findUnique({
+          where: { userId: user.userId },
+        });
+
+        if (!host) {
+          return reply.status(400).send({ error: 'Host profile not found' });
+        }
+
+        // Delete or update blocked dates
+        const operations = dates.map((dateStr) => {
+          const date = new Date(dateStr);
+          return prisma.hostAvailability.deleteMany({
+            where: {
+              hostId: host.id,
+              date,
+            },
+          });
+        });
+
+        await prisma.$transaction(operations);
+
+        return reply.status(200).send({ message: 'Dates unblocked successfully' });
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
+    }
+  );
 }

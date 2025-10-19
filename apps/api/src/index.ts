@@ -78,6 +78,10 @@ app.register(async (instance) => {
   const { registerFavoriteRoutes } = await import('./modules/favorites/routes.js');
   await registerFavoriteRoutes(instance);
 
+  // Search routes
+  const { registerSearchRoutes } = await import('./modules/search/routes.js');
+  await registerSearchRoutes(instance);
+
   // Health check for API
   instance.get('/v1/hello', async () => ({ 
     message: 'PetStay API v1',
