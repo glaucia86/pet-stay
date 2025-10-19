@@ -379,7 +379,7 @@ Para solicitar permissões ou licenciamento, entre em contato através dos canai
 
 ## 📞 Contato
 
-- **Email**: contato@petstay.com.br
+- **Email**: glaucia_lemos86@hotmail.com
 - **LinkedIn**: [Glaucia Lemos](https://www.linkedin.com/in/glaucialemos/)
 - **GitHub**: [@glaucia86](https://github.com/glaucia86)
 - **Telefone**: (21) xxxxx-xxxx
