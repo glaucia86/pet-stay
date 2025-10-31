@@ -3,6 +3,22 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from './config.js';
 import sharp from 'sharp';
 import crypto from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Local uploads directory
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+
+// Ensure uploads directory exists
+await fs.mkdir(UPLOADS_DIR, { recursive: true });
+await fs.mkdir(path.join(UPLOADS_DIR, 'avatar'), { recursive: true });
+await fs.mkdir(path.join(UPLOADS_DIR, 'petPhoto'), { recursive: true });
+await fs.mkdir(path.join(UPLOADS_DIR, 'listingPhoto'), { recursive: true });
 
 // Initialize S3 Client
 let s3Client: S3Client | null = null;
@@ -86,7 +102,7 @@ export function generateS3Key(userId: string, type: ImageType, originalName: str
 }
 
 /**
- * Uploads an image to S3 with optimization
+ * Uploads an image to S3 with optimization or saves locally if S3 is not configured
  */
 export async function uploadImageToS3(
   buffer: Buffer,
@@ -96,10 +112,6 @@ export async function uploadImageToS3(
   type: ImageType,
   originalName: string
 ): Promise<{ url: string; key: string }> {
-  if (!s3Client || !config.S3_BUCKET_NAME) {
-    throw new Error('S3 is not configured. Please set AWS credentials in environment variables.');
-  }
-
   // Validate image
   const validation = validateImage(mimetype, size);
   if (!validation.valid) {
@@ -109,21 +121,37 @@ export async function uploadImageToS3(
   // Optimize image
   const { buffer: optimizedBuffer, contentType } = await optimizeImage(buffer, type);
 
-  // Generate S3 key
+  // Generate key/filename
   const key = generateS3Key(userId, type, originalName);
 
-  // Upload to S3
-  const command = new PutObjectCommand({
-    Bucket: config.S3_BUCKET_NAME,
-    Key: key,
-    Body: optimizedBuffer,
-    ContentType: contentType,
-  });
+  // If S3 is configured, upload to S3
+  if (s3Client && config.S3_BUCKET_NAME) {
+    const command = new PutObjectCommand({
+      Bucket: config.S3_BUCKET_NAME,
+      Key: key,
+      Body: optimizedBuffer,
+      ContentType: contentType,
+    });
 
-  await s3Client.send(command);
+    await s3Client.send(command);
 
-  // Generate public URL
-  const url = `https://${config.S3_BUCKET_NAME}.s3.${config.AWS_REGION}.amazonaws.com/${key}`;
+    // Generate public URL
+    const url = `https://${config.S3_BUCKET_NAME}.s3.${config.AWS_REGION}.amazonaws.com/${key}`;
+
+    return { url, key };
+  }
+
+  // Otherwise, save locally
+  const localPath = path.join(UPLOADS_DIR, key);
+  
+  // Ensure the directory exists
+  const localDir = path.dirname(localPath);
+  await fs.mkdir(localDir, { recursive: true });
+  
+  await fs.writeFile(localPath, optimizedBuffer);
+
+  // Generate local URL (will be served by static file handler)
+  const url = `/uploads/${key}`;
 
   return { url, key };
 }
@@ -155,4 +183,11 @@ export async function generatePresignedUploadUrl(
  */
 export function isS3Configured(): boolean {
   return s3Client !== null && !!config.S3_BUCKET_NAME;
+}
+
+/**
+ * Get the local uploads directory path
+ */
+export function getUploadsDir(): string {
+  return UPLOADS_DIR;
 }

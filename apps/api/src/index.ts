@@ -5,14 +5,18 @@ import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { config } from './core/config.js';
+import { getUploadsDir } from './core/s3.js';
 
 const app = Fastify({
   logger: true,
 });
 
 // Security plugins
-app.register(helmet);
+app.register(helmet, {
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+});
 app.register(cors, {
   origin: config.WEB_ORIGIN,
   credentials: true,
@@ -30,6 +34,18 @@ app.register(cookie, {
 
 // File upload support
 app.register(multipart);
+
+// Static files (for local uploads)
+app.register(fastifyStatic, {
+  root: getUploadsDir(),
+  prefix: '/uploads/',
+  decorateReply: false,
+  setHeaders: (res, path, stat) => {
+    res.setHeader('Access-Control-Allow-Origin', config.WEB_ORIGIN);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  },
+});
 
 // Rate limiting
 app.register(rateLimit, {

@@ -21,10 +21,10 @@
     "@fastify/jwt": "^7.2.4",
     "@fastify/multipart": "^8.3.0",
     "@fastify/rate-limit": "^9.1.0",
+    "@fastify/static": "^7.0.4",
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
-    "esbuild": "^0.25.11",
     "fastify": "^4.28.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.7",
@@ -37,6 +37,7 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
+    "@esbuild/win32-x64": "^0.25.11",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.9.4",
@@ -46,6 +47,7 @@
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "esbuild": "^0.25.11",
     "eslint": "^8.57.0",
     "prisma": "^5.20.0",
     "tsx": "^4.19.0",

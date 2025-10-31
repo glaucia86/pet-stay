@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { ZodTypeAny } from 'zod';
 import { AuthService } from './service.js';
 import {
   registerSchema,
@@ -12,11 +13,14 @@ import {
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   const authService = new AuthService();
+  const registerBodySchema = zodToJsonSchema(registerSchema as any) as Record<string, unknown>;
+  const loginBodySchema = zodToJsonSchema(loginSchema as any) as Record<string, unknown>;
+  const refreshBodySchema = zodToJsonSchema(refreshTokenSchema as any) as Record<string, unknown>;
 
   // Register
   app.post<{ Body: RegisterInput }>('/v1/auth/register', {
     schema: {
-      body: zodToJsonSchema(registerSchema),
+      body: registerBodySchema,
     },
     handler: async (request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) => {
       try {
@@ -48,7 +52,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   // Login
   app.post<{ Body: LoginInput }>('/v1/auth/login', {
     schema: {
-      body: zodToJsonSchema(loginSchema),
+      body: loginBodySchema,
     },
     handler: async (request: FastifyRequest<{ Body: LoginInput }>, reply: FastifyReply) => {
       try {
@@ -79,7 +83,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   // Refresh token
   app.post<{ Body: RefreshTokenInput }>('/v1/auth/refresh', {
     schema: {
-      body: zodToJsonSchema(refreshTokenSchema),
+      body: refreshBodySchema,
     },
     handler: async (request: FastifyRequest<{ Body: RefreshTokenInput }>, reply: FastifyReply) => {
       try {

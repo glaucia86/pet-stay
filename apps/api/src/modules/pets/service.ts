@@ -98,12 +98,24 @@ export class PetService {
       throw new Error('Unauthorized to update this pet');
     }
 
+    // Prepare update data
+    const updateData: any = { ...data };
+    
+    // Convert birthDate string to Date if provided
+    if (data.birthDate) {
+      updateData.birthDate = new Date(data.birthDate);
+    }
+
+    // Remove undefined values to avoid issues
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
     const updatedPet = await prisma.pet.update({
       where: { id: petId },
-      data: {
-        ...data,
-        birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-      },
+      data: updateData,
     });
 
     return updatedPet;

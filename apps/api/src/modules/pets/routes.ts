@@ -14,12 +14,15 @@ import {
 
 export async function registerPetRoutes(app: FastifyInstance) {
   const petService = new PetService();
+  const createPetBodySchema = zodToJsonSchema(createPetSchema as any) as Record<string, unknown>;
+  const updatePetBodySchema = zodToJsonSchema(updatePetSchema as any) as Record<string, unknown>;
+  const getPetParamsJsonSchema = zodToJsonSchema(getPetParamsSchema as any) as Record<string, unknown>;
 
   // Create a new pet
   app.post<{ Body: CreatePetInput }>('/pets', {
     onRequest: [authenticateJWT],
     schema: {
-      body: zodToJsonSchema(createPetSchema),
+      body: createPetBodySchema,
     },
     handler: async (request: FastifyRequest<{ Body: CreatePetInput }>, reply: FastifyReply) => {
       try {
@@ -53,7 +56,7 @@ export async function registerPetRoutes(app: FastifyInstance) {
   app.get<{ Params: GetPetParams }>('/pets/:petId', {
     onRequest: [authenticateJWT],
     schema: {
-      params: zodToJsonSchema(getPetParamsSchema),
+      params: getPetParamsJsonSchema,
     },
     handler: async (request: FastifyRequest<{ Params: GetPetParams }>, reply: FastifyReply) => {
       try {
@@ -71,8 +74,8 @@ export async function registerPetRoutes(app: FastifyInstance) {
   app.patch<{ Params: GetPetParams; Body: UpdatePetInput }>('/pets/:petId', {
     onRequest: [authenticateJWT],
     schema: {
-      params: zodToJsonSchema(getPetParamsSchema),
-      body: zodToJsonSchema(updatePetSchema),
+      params: getPetParamsJsonSchema,
+      body: updatePetBodySchema,
     },
     handler: async (request: FastifyRequest<{ Params: GetPetParams; Body: UpdatePetInput }>, reply: FastifyReply) => {
       try {
@@ -90,7 +93,7 @@ export async function registerPetRoutes(app: FastifyInstance) {
   app.delete<{ Params: GetPetParams }>('/pets/:petId', {
     onRequest: [authenticateJWT],
     schema: {
-      params: zodToJsonSchema(getPetParamsSchema),
+      params: getPetParamsJsonSchema,
     },
     handler: async (request: FastifyRequest<{ Params: GetPetParams }>, reply: FastifyReply) => {
       try {
@@ -108,16 +111,10 @@ export async function registerPetRoutes(app: FastifyInstance) {
   app.post<{ Params: GetPetParams }>('/pets/:petId/photo', {
     onRequest: [authenticateJWT],
     schema: {
-      params: zodToJsonSchema(getPetParamsSchema),
+      params: getPetParamsJsonSchema,
     },
     handler: async (request: FastifyRequest<{ Params: GetPetParams }>, reply: FastifyReply) => {
       try {
-        // Check if S3 is configured
-        if (!isS3Configured()) {
-          reply.status(503);
-          return { error: 'File upload is not available. S3 is not configured.' };
-        }
-
         const user = request.user as AuthenticatedUser;
 
         // Get uploaded file
@@ -130,7 +127,7 @@ export async function registerPetRoutes(app: FastifyInstance) {
         // Convert file stream to buffer
         const buffer = await data.toBuffer();
 
-        // Upload to S3
+        // Upload (to S3 or locally)
         const { url } = await uploadImageToS3(
           buffer,
           data.mimetype,

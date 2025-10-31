@@ -14,10 +14,15 @@ interface Pet {
   species: 'dog' | 'cat';
   breed: string;
   size: 'small' | 'medium' | 'large';
-  age: number;
+  birthDate?: string;
+  weight?: number;
   photoUrl?: string;
   medicalInfo?: string;
-  vaccinated: boolean;
+  isVaccinated: boolean;
+  vaccinationDetails?: string;
+  specialNeeds?: string;
+  temperament?: string;
+  gender?: string;
 }
 
 export default function PetsPage() {
@@ -29,6 +34,34 @@ export default function PetsPage() {
 }
 
 function PetsContent() {
+  const uploadsBaseUrl = (() => {
+    const raw = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.endsWith('/api')) {
+        parsed.pathname = parsed.pathname.replace(/\/api$/, '');
+      }
+      const cleanedPath = parsed.pathname.replace(/\/$/, '');
+      return `${parsed.origin}${cleanedPath}`;
+    } catch {
+      return raw.replace(/\/api$/, '');
+    }
+  })();
+
+  const resolveAssetUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('blob:')) {
+      return url;
+    }
+    const separator = url.startsWith('/') ? '' : '/';
+    return `${uploadsBaseUrl}${separator}${url}`;
+  };
+  const formatDateForInput = (isoDate?: string) => {
+    if (!isoDate) return '';
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().split('T')[0];
+  };
   const router = useRouter();
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,9 +76,11 @@ function PetsContent() {
     species: 'dog' as 'dog' | 'cat',
     breed: '',
     size: 'medium' as 'small' | 'medium' | 'large',
-    age: 1,
+    birthDate: '',
+    weight: undefined as number | undefined,
     medicalInfo: '',
-    vaccinated: false,
+    isVaccinated: false,
+    gender: '',
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -76,9 +111,11 @@ function PetsContent() {
       species: 'dog',
       breed: '',
       size: 'medium',
-      age: 1,
+      birthDate: '',
+      weight: undefined,
       medicalInfo: '',
-      vaccinated: false,
+      isVaccinated: false,
+      gender: '',
     });
     setPhotoFile(null);
     setPhotoPreview('');
@@ -93,12 +130,14 @@ function PetsContent() {
       species: pet.species,
       breed: pet.breed,
       size: pet.size,
-      age: pet.age,
+      birthDate: formatDateForInput(pet.birthDate),
+      weight: pet.weight,
       medicalInfo: pet.medicalInfo || '',
-      vaccinated: pet.vaccinated,
+      isVaccinated: pet.isVaccinated,
+      gender: pet.gender || '',
     });
     setPhotoFile(null);
-    setPhotoPreview(pet.photoUrl || '');
+    setPhotoPreview(pet.photoUrl ? resolveAssetUrl(pet.photoUrl) : '');
     setFormError('');
     setShowModal(true);
   };
@@ -128,27 +167,46 @@ function PetsContent() {
     try {
       let petId = editingPet?.id;
 
+      // Prepare data for backend
+      const petData: any = {
+        name: formData.name,
+        species: formData.species,
+        breed: formData.breed,
+        size: formData.size,
+        medicalInfo: formData.medicalInfo || undefined,
+        isVaccinated: formData.isVaccinated,
+        gender: formData.gender || undefined,
+        weight: formData.weight || undefined,
+      };
+
+      // Convert birthDate to ISO format if provided
+      if (formData.birthDate) {
+        petData.birthDate = new Date(formData.birthDate).toISOString();
+      }
+
       // Create or update pet
       if (editingPet) {
-        await api.patch(`/pets/${editingPet.id}`, formData);
+        await api.patch(`/pets/${editingPet.id}`, petData);
       } else {
-        const response = await api.post('/pets', formData);
+        const response = await api.post('/pets', petData);
         petId = response.data.id;
       }
 
       // Upload photo if selected
       if (photoFile && petId) {
         const photoFormData = new FormData();
-        photoFormData.append('photo', photoFile);
+        photoFormData.append('file', photoFile);
         await api.post(`/pets/${petId}/photo`, photoFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
       }
 
       await loadPets();
       setShowModal(false);
     } catch (err: any) {
-      setFormError(err.response?.data?.message || 'Erro ao salvar pet');
+      setFormError(err.response?.data?.error || err.response?.data?.message || 'Erro ao salvar pet');
     } finally {
       setIsSubmitting(false);
     }
@@ -269,15 +327,24 @@ function PetsContent() {
                       <div className="relative h-48 bg-gradient-to-br from-primary-50 to-purple-50 rounded-t-xl overflow-hidden">
                         {pet.photoUrl ? (
                           <img
-                            src={pet.photoUrl}
+                            src={resolveAssetUrl(pet.photoUrl)}
                             alt={pet.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.parentElement?.querySelector('.fallback-emoji');
+                              if (fallback) {
+                                (fallback as HTMLElement).style.display = 'flex';
+                              }
+                            }}
                           />
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <span className="text-6xl">{getSpeciesEmoji(pet.species)}</span>
-                          </div>
-                        )}
+                        ) : null}
+                        <div 
+                          className={`fallback-emoji flex items-center justify-center h-full ${pet.photoUrl ? 'hidden' : ''}`}
+                        >
+                          <span className="text-6xl">{getSpeciesEmoji(pet.species)}</span>
+                        </div>
                         
                         {/* Actions Overlay */}
                         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -300,7 +367,7 @@ function PetsContent() {
                       <div className="p-5">
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="text-xl font-bold text-gray-900">{pet.name}</h3>
-                          {pet.vaccinated && (
+                          {pet.isVaccinated && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                               Vacinado
                             </span>
@@ -317,9 +384,11 @@ function PetsContent() {
                           <p>
                             <span className="font-medium">Porte:</span> {getSizeLabel(pet.size)}
                           </p>
-                          <p>
-                            <span className="font-medium">Idade:</span> {pet.age} {pet.age === 1 ? 'ano' : 'anos'}
-                          </p>
+                          {pet.birthDate && (
+                            <p>
+                              <span className="font-medium">Idade:</span> {Math.floor((new Date().getTime() - new Date(pet.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} anos
+                            </p>
+                          )}
                           {pet.medicalInfo && (
                             <p className="pt-2 border-t border-gray-100">
                               <span className="font-medium">Observações:</span>
@@ -366,7 +435,7 @@ function PetsContent() {
                 <div className="flex items-center gap-4">
                   {photoPreview ? (
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                      <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={resolveAssetUrl(photoPreview)} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -435,7 +504,7 @@ function PetsContent() {
                 </div>
               </div>
 
-              {/* Breed & Age */}
+              {/* Breed & Birth Date */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -452,16 +521,46 @@ function PetsContent() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Idade (anos) *
+                    Data de Nascimento
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.birthDate}
+                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    className="input"
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+
+              {/* Gender & Weight */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gênero
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="input"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="male">Macho</option>
+                    <option value="female">Fêmea</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Peso (kg)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    max="30"
-                    value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })}
+                    step="0.1"
+                    value={formData.weight || ''}
+                    onChange={(e) => setFormData({ ...formData, weight: e.target.value ? parseFloat(e.target.value) : undefined })}
                     className="input"
-                    required
+                    placeholder="Ex: 10.5"
                   />
                 </div>
               </div>
@@ -483,12 +582,12 @@ function PetsContent() {
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  id="vaccinated"
-                  checked={formData.vaccinated}
-                  onChange={(e) => setFormData({ ...formData, vaccinated: e.target.checked })}
+                  id="isVaccinated"
+                  checked={formData.isVaccinated}
+                  onChange={(e) => setFormData({ ...formData, isVaccinated: e.target.checked })}
                   className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                 />
-                <label htmlFor="vaccinated" className="ml-2 text-sm text-gray-700">
+                <label htmlFor="isVaccinated" className="ml-2 text-sm text-gray-700">
                   Pet vacinado
                 </label>
               </div>
